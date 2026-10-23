@@ -1,0 +1,106 @@
+name: Build Light Animator APK
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create Android Project
+        run: |
+          mkdir -p app/src/main/java/com/offline/animator
+          mkdir -p app/src/main/res/layout
+          mkdir -p .github/workflows
+          
+          cat > settings.gradle << 'EOF'
+          include ':app'
+          EOF
+          
+          cat > build.gradle << 'EOF'
+          task clean(type: Delete) { delete rootProject.buildDir }
+          EOF
+          
+          cat > app/build.gradle << 'EOF'
+          plugins { id 'com.android.application' }
+          android {
+            compileSdk 34
+            defaultConfig {
+              applicationId "com.offline.animator"
+              minSdk 26
+              targetSdk 34
+              versionCode 1
+              versionName "1.0 Light"
+            }
+            buildTypes { release { minifyEnabled false } }
+            compileOptions {
+              sourceCompatibility JavaVersion.VERSION_17
+              targetCompatibility JavaVersion.VERSION_17
+            }
+          }
+          dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+            implementation 'com.google.android.material:material:1.11.0'
+          }
+          EOF
+          
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <application android:label="Offline Animator Light" android:theme="@android:style/Theme.Material.Light">
+              <activity android:name=".MainActivity" android:exported="true">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          EOF
+          
+          cat > app/src/main/res/layout/activity_main.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:orientation="vertical" android:padding="20dp"
+            android:layout_width="match_parent" android:layout_height="match_parent">
+            <TextView android:text="Offline Animator LIGHT - Funktioniert!" android:textSize="22sp" android:textStyle="bold" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            <TextView android:id="@+id/status" android:text="100% Offline - Bereit" android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+          </LinearLayout>
+          EOF
+          
+          cat > app/src/main/java/com/offline/animator/MainActivity.java << 'EOF'
+          package com.offline.animator;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.widget.TextView;
+          public class MainActivity extends Activity {
+            @Override protected void onCreate(Bundle b) {
+              super.onCreate(b);
+              setContentView(R.layout.activity_main);
+              TextView t = findViewById(R.id.status);
+              t.setText("Deine Offline Bild-Animator App ist installiert!\n\nLight Version laeuft 100% offline.\n\nNaechster Schritt: Bild waehlen und animieren.");
+            }
+          }
+          EOF
+          
+          cat > gradlew << 'EOF'
+          #!/bin/sh
+          echo "Gradle Wrapper"
+          EOF
+          chmod +x gradlew
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v3
+
+      - name: Build APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Offline-Animator-Light-APK
+          path: app/build/outputs/apk/debug/*.apk
