@@ -6,33 +6,60 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Create Android Project
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Project
         run: |
+          cat > settings.gradle << 'ENDOFFILE'
+          pluginManagement {
+            repositories {
+              google()
+              mavenCentral()
+              gradlePluginPortal()
+            }
+          }
+          dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+              google()
+              mavenCentral()
+            }
+          }
+          rootProject.name = "offline-animator"
+          include ':app'
+          ENDOFFILE
+
+          cat > build.gradle << 'ENDOFFILE'
+          plugins {
+            id 'com.android.application' version '8.2.2' apply false
+          }
+          ENDOFFILE
+
           mkdir -p app/src/main/java/com/offline/animator
           mkdir -p app/src/main/res/layout
-          mkdir -p .github/workflows
-          
-          cat > settings.gradle << 'EOF'
-          include ':app'
-          EOF
-          
-          cat > build.gradle << 'EOF'
-          task clean(type: Delete) { delete rootProject.buildDir }
-          EOF
-          
-          cat > app/build.gradle << 'EOF'
-          plugins { id 'com.android.application' }
+
+          cat > app/build.gradle << 'ENDOFFILE'
+          plugins {
+            id 'com.android.application'
+          }
           android {
+            namespace 'com.offline.animator'
             compileSdk 34
             defaultConfig {
               applicationId "com.offline.animator"
               minSdk 26
               targetSdk 34
               versionCode 1
-              versionName "1.0 Light"
+              versionName "1.0"
             }
-            buildTypes { release { minifyEnabled false } }
             compileOptions {
               sourceCompatibility JavaVersion.VERSION_17
               targetCompatibility JavaVersion.VERSION_17
@@ -40,11 +67,10 @@ jobs:
           }
           dependencies {
             implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.11.0'
           }
-          EOF
-          
-          cat > app/src/main/AndroidManifest.xml << 'EOF'
+          ENDOFFILE
+
+          cat > app/src/main/AndroidManifest.xml << 'ENDOFFILE'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <application android:label="Offline Animator Light" android:theme="@android:style/Theme.Material.Light">
@@ -56,51 +82,36 @@ jobs:
               </activity>
             </application>
           </manifest>
-          EOF
-          
-          cat > app/src/main/res/layout/activity_main.xml << 'EOF'
+          ENDOFFILE
+
+          cat > app/src/main/res/layout/activity_main.xml << 'ENDOFFILE'
           <?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:orientation="vertical" android:padding="20dp"
-            android:layout_width="match_parent" android:layout_height="match_parent">
-            <TextView android:text="Offline Animator LIGHT - Funktioniert!" android:textSize="22sp" android:textStyle="bold" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/status" android:text="100% Offline - Bereit" android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:padding="20dp" android:layout_width="match_parent" android:layout_height="match_parent">
+          <TextView android:text="Offline Animator LIGHT" android:textSize="22sp" android:textStyle="bold" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+          <TextView android:text="Deine APK funktioniert! 100% offline." android:layout_marginTop="20dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
           </LinearLayout>
-          EOF
-          
-          cat > app/src/main/java/com/offline/animator/MainActivity.java << 'EOF'
+          ENDOFFILE
+
+          cat > app/src/main/java/com/offline/animator/MainActivity.java << 'ENDOFFILE'
           package com.offline.animator;
           import android.app.Activity;
           import android.os.Bundle;
-          import android.widget.TextView;
           public class MainActivity extends Activity {
             @Override protected void onCreate(Bundle b) {
               super.onCreate(b);
               setContentView(R.layout.activity_main);
-              TextView t = findViewById(R.id.status);
-              t.setText("Deine Offline Bild-Animator App ist installiert!\n\nLight Version laeuft 100% offline.\n\nNaechster Schritt: Bild waehlen und animieren.");
             }
           }
-          EOF
-          
-          cat > gradlew << 'EOF'
-          #!/bin/sh
-          echo "Gradle Wrapper"
-          EOF
-          chmod +x gradlew
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - uses: gradle/actions/setup-gradle@v3
+          ENDOFFILE
 
       - name: Build APK
-        run: ./gradlew assembleDebug
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.5
+          arguments: assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Offline-Animator-Light-APK
-          path: app/build/outputs/apk/debug/*.apk
+          name: Offline-Animator-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
